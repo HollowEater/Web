@@ -1,0 +1,78 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+}
+
+.email-container {
+    max-width: 600px;
+    margin: 50px auto;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.header {
+    background-color: #a50064; 
+    padding: 20px;
+    text-align: center;
+    color: white;
+}
+
+.content {
+    padding: 40px;
+    text-align: center;
+}
+
+.success-icon {
+    font-size: 50px;
+    color: #39c5bb;
+    margin-bottom: 20px;
+}
+
+.momo {
+    width: 220px;           
+    height: 220px;        
+    margin: 30px auto;     
+    padding: 15px;        
+    background-color: #fff0f6; 
+    border: 3px dashed #a50064;
+    border-radius: 20px;  
+    box-shadow: 0 5px 15px rgba(165, 0, 100, 0.2); 
+    display: flex;          
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-placeholder-text {
+    color: #a50064;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.order-info {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 20px;
+    text-align: left;
+    border-left: 4px solid #39c5bb;
+}
+
+.btn-home {
+    display: inline-block;
+    margin-top: 30px;
+    padding: 12px 30px;
+    background-color: #39c5bb;
+    color: white;
+    text-decoration: none;
+    border-radius: 30px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.btn-home:hover {
+    background-color: #2ca99f;
+}
