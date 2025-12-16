@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         ĐĂNG NHẬP
                     </button>
 
-                    <a href="#" style="text-decoration: none; color: #666; font-size: 14px; transition: 0.3s;"
+                    <a href="password.php" style="text-decoration: none; color: #666; font-size: 14px; transition: 0.3s;"
                         onmouseover="this.style.color='#39c5bb'"
                         onmouseout="this.style.color='#666'">
                         Quên mật khẩu?
