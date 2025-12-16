@@ -1,3 +1,12 @@
+<?php
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = $_POST['email'];
+    echo "<script>
+            alert('Yêu cầu thành công!\\nChúng tôi đã gửi hướng dẫn đặt lại mật khẩu về email: $email.\\nVui lòng kiểm tra hộp thư (bao gồm cả mục Spam).');
+            window.location.href = 'login.php'; // Chuyển về trang đăng nhập
+          </script>";
+}
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
