@@ -31,12 +31,9 @@
             </div>
             <div class="order-info">
                 <p style="margin: 5px 0;"><strong>Mã đơn hàng:</strong> #DH20258888</p>
-                <p style="margin: 5px 0;"><strong>Tổng thanh toán:</strong> <span style="color: #d32f2f; font-weight: bold;">480.000đ</span></p>
+                <p style="margin: 5px 0;"><strong>Tổng thanh toán:</strong> <span style="color: #d32f2f; font-weight: bold;">đ</span></p>
                 <p style="margin: 5px 0;"><strong>Nội dung chuyển khoản:</strong> Tên + SĐT</p>
             </div>
-            <a href="index.php" class="btn-home">
-                <i class="fa-solid fa-house"></i> QUAY VỀ TRANG CHỦ
-            </a>
         </div>
     </div>
 </body>
