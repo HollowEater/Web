@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <a href="admin.php"
+        <a href="instock.php"
             style="background: transparent; color: #39c5bb; border: 2px solid #39c5bb; padding: 8px 20px; font-weight: bold; text-decoration: none; border-radius: 5px;">
             HÀNG MỚI PHÁT HÀNH
         </a>
