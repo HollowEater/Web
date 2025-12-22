@@ -1,40 +1,23 @@
 <?php
-/**
- * FILE CẤU HÌNH KẾT NỐI DATABASE
- * NULL EATER STORE - WEBSITE BÁN FIGURE
- * Cập nhật: Đã tích hợp đầy đủ các hàm hỗ trợ
- */
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'null_eater_store');
+define('DB_CHARSET', 'utf8mb4');
 
-// =============================================
-// THÔNG TIN KẾT NỐI DATABASE
-// =============================================
-
-define('DB_HOST', 'localhost');        // Địa chỉ máy chủ database
-define('DB_USER', 'root');             // Tên đăng nhập MySQL
-define('DB_PASS', '');                 // Mật khẩu MySQL (để trống nếu dùng XAMPP/WAMP)
-define('DB_NAME', 'null_eater_store'); // Tên database
-define('DB_CHARSET', 'utf8mb4');       // Mã hóa ký tự
-
-// =============================================
-// KẾT NỐI MYSQLI
-// =============================================
-
+// KẾT NỐI MYSQL
 try {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    
     // Kiểm tra kết nối
     if ($conn->connect_error) {
         throw new Exception("Kết nối database thất bại: " . $conn->connect_error);
     }
-    
     // Set charset UTF-8
     if (!$conn->set_charset(DB_CHARSET)) {
         throw new Exception("Lỗi khi thiết lập charset UTF-8: " . $conn->error);
     }
-    
     // Thiết lập timezone
     $conn->query("SET time_zone = '+07:00'");
-    
 } catch (Exception $e) {
     // Ghi log lỗi
     error_log($e->getMessage());
@@ -58,50 +41,32 @@ function clean_input($data) {
     return $conn->real_escape_string($data);
 }
 
-/**
- * Format giá tiền VNĐ
- * VD: 1500000 => "1.500.000đ"
- */
+
 function format_currency($amount) {
     return number_format($amount, 0, ',', '.') . 'đ';
 }
 
-/**
- * Format ngày tháng
- * VD: "2025-12-22" => "22/12/2025"
- */
+
 function format_date($date) {
     return date('d/m/Y', strtotime($date));
 }
 
-/**
- * Format ngày giờ
- * VD: "2025-12-22 14:30:00" => "22/12/2025 14:30"
- */
+
 function format_datetime($datetime) {
     return date('d/m/Y H:i', strtotime($datetime));
 }
 
-/**
- * Chuyển đổi giá từ string sang số
- * VD: "9.900.000đ" => 9900000
- */
+/* Chuyển đổi giá từ string sang số*/
 function price_to_number($price_string) {
     return intval(str_replace(['.', 'đ', ' '], '', $price_string));
 }
 
-/**
- * Chuyển đổi số sang định dạng giá
- * VD: 9900000 => "9.900.000đ"
- */
+/* Chuyển đổi số sang định dạng giá */
 function number_to_price($number) {
     return number_format($number, 0, ',', '.') . 'đ';
 }
 
-/**
- * Tạo slug từ tiêu đề (cho SEO friendly URL)
- * VD: "Hatsune Miku Figure" => "hatsune-miku-figure"
- */
+/* Tạo slug từ tiêu đề (cho SEO friendly URL) */
 function create_slug($string) {
     // Chuyển đổi tiếng Việt
     $string = preg_replace("/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/", 'a', $string);
@@ -119,9 +84,7 @@ function create_slug($string) {
     return $string;
 }
 
-/**
- * Kiểm tra user đã đăng nhập chưa
- */
+/* Kiểm tra user đã đăng nhập chưa*/
 function check_login() {
     if (!isset($_SESSION['user_id'])) {
         header("Location: login.php");
@@ -129,9 +92,7 @@ function check_login() {
     }
 }
 
-/**
- * Kiểm tra user có phải admin không
- */
+/* Kiểm tra user có phải admin không*/
 function check_admin() {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
         header("Location: index.php");
@@ -139,9 +100,7 @@ function check_admin() {
     }
 }
 
-/**
- * Lấy số lượng sản phẩm trong giỏ hàng
- */
+/*Lấy số lượng sản phẩm trong giỏ hàng*/
 function get_cart_count() {
     global $conn;
     
@@ -160,28 +119,19 @@ function get_cart_count() {
     return $row['total'] ?? 0;
 }
 
-/**
- * Tạo mã đơn hàng ngẫu nhiên
- * VD: "DH20258888"
- */
+/*Tạo mã đơn hàng ngẫu nhiên*/
 function generate_order_code() {
     $year = date('Y');
     $random = rand(1000, 9999);
     return "DH{$year}{$random}";
 }
 
-/**
- * Gửi email (cần cấu hình SMTP)
- */
+/* Gửi email*/
 function send_email($to, $subject, $message) {
-    // TODO: Implement email functionality
-    // Có thể sử dụng PHPMailer hoặc mail() function
     return true;
 }
 
-/**
- * Upload hình ảnh
- */
+/* Upload hình ảnh*/
 function upload_image($file, $target_dir = 'imginstock/') {
     $target_file = $target_dir . basename($file["name"]);
     $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
@@ -213,9 +163,7 @@ function upload_image($file, $target_dir = 'imginstock/') {
     }
 }
 
-/**
- * Phân trang
- */
+/*Phân trang */
 function paginate($total_records, $records_per_page, $current_page) {
     $total_pages = ceil($total_records / $records_per_page);
     $offset = ($current_page - 1) * $records_per_page;
@@ -227,9 +175,7 @@ function paginate($total_records, $records_per_page, $current_page) {
     ];
 }
 
-/**
- * Tính phần trăm giảm giá
- */
+/*Tính phần trăm giảm giá*/
 function calculate_discount_percent($original_price, $sale_price) {
     $original = price_to_number($original_price);
     $sale = price_to_number($sale_price);
@@ -240,9 +186,7 @@ function calculate_discount_percent($original_price, $sale_price) {
     return round($discount);
 }
 
-/**
- * Kiểm tra sản phẩm còn hàng không
- */
+/* Kiểm tra sản phẩm còn hàng không*/
 function check_stock($product_id) {
     global $conn;
     
@@ -256,9 +200,7 @@ function check_stock($product_id) {
     return $row['so_luong_ton'] > 0;
 }
 
-/**
- * Lấy thông tin sản phẩm theo ID
- */
+/* Lấy thông tin sản phẩm theo ID */
 function get_product_by_id($product_id) {
     global $conn;
     
@@ -271,9 +213,7 @@ function get_product_by_id($product_id) {
     return $result->fetch_assoc();
 }
 
-/**
- * Cập nhật số lượng tồn kho
- */
+/* Cập nhật số lượng tồn kho*/
 function update_stock($product_id, $quantity, $operation = 'decrease') {
     global $conn;
     
@@ -288,21 +228,13 @@ function update_stock($product_id, $quantity, $operation = 'decrease') {
     return $stmt->execute();
 }
 
-/**
- * Ghi log hoạt động (cho admin)
- */
+/*Ghi log hoạt động (cho admin)*/
 function log_activity($user_id, $action, $description) {
     global $conn;
-    
-    // TODO: Tạo bảng activity_log nếu cần
-    // INSERT INTO activity_log (user_id, action, description, created_at)
-    
     error_log("User $user_id: $action - $description");
 }
 
-/**
- * Làm sạch chuỗi tìm kiếm
- */
+/*Làm sạch chuỗi tìm kiếm */
 function clean_search_string($string) {
     $string = trim($string);
     $string = strip_tags($string);
@@ -310,17 +242,12 @@ function clean_search_string($string) {
     return $string;
 }
 
-// =============================================
 // KHỞI TẠO SESSION
-// =============================================
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// =============================================
 // CÁC HẰNG SỐ THƯỜNG DÙNG
-// =============================================
 
 define('SITE_NAME', 'Null Eater Store');
 define('SITE_URL', 'http://localhost/null_eater_store/');
@@ -328,13 +255,7 @@ define('ADMIN_EMAIL', 'admin@nulleater.com');
 define('ITEMS_PER_PAGE', 12);
 define('UPLOAD_MAX_SIZE', 5242880); // 5MB
 
-// =============================================
 // ERROR REPORTING (Chỉ bật khi development)
-// =============================================
-
-// Uncomment dòng dưới khi đang phát triển để xem lỗi
-// error_reporting(E_ALL);
-// ini_set('display_errors', 1);
 
 // Comment dòng dưới khi đã deploy production
 error_reporting(0);
