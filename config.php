@@ -2,6 +2,7 @@
 /**
  * FILE CẤU HÌNH KẾT NỐI DATABASE
  * NULL EATER STORE - WEBSITE BÁN FIGURE
+ * Cập nhật: Đã tích hợp đầy đủ các hàm hỗ trợ
  */
 
 // =============================================
@@ -47,18 +48,19 @@ try {
 // =============================================
 
 /**
- * Làm sạch dữ liệu đầu vào để tránh SQL Injection
+ * Làm sạch dữ liệu đầu vào để tránh SQL Injection và XSS
  */
 function clean_input($data) {
     global $conn;
     $data = trim($data);
     $data = stripslashes($data);
-    $data = htmlspecialchars($data);
+    $data = htmlspecialchars($data, ENT_QUOTES, 'UTF-8');
     return $conn->real_escape_string($data);
 }
 
 /**
  * Format giá tiền VNĐ
+ * VD: 1500000 => "1.500.000đ"
  */
 function format_currency($amount) {
     return number_format($amount, 0, ',', '.') . 'đ';
@@ -66,6 +68,7 @@ function format_currency($amount) {
 
 /**
  * Format ngày tháng
+ * VD: "2025-12-22" => "22/12/2025"
  */
 function format_date($date) {
     return date('d/m/Y', strtotime($date));
@@ -73,6 +76,7 @@ function format_date($date) {
 
 /**
  * Format ngày giờ
+ * VD: "2025-12-22 14:30:00" => "22/12/2025 14:30"
  */
 function format_datetime($datetime) {
     return date('d/m/Y H:i', strtotime($datetime));
@@ -87,9 +91,27 @@ function price_to_number($price_string) {
 }
 
 /**
- * Tạo slug từ tiêu đề
+ * Chuyển đổi số sang định dạng giá
+ * VD: 9900000 => "9.900.000đ"
+ */
+function number_to_price($number) {
+    return number_format($number, 0, ',', '.') . 'đ';
+}
+
+/**
+ * Tạo slug từ tiêu đề (cho SEO friendly URL)
+ * VD: "Hatsune Miku Figure" => "hatsune-miku-figure"
  */
 function create_slug($string) {
+    // Chuyển đổi tiếng Việt
+    $string = preg_replace("/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/", 'a', $string);
+    $string = preg_replace("/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/", 'e', $string);
+    $string = preg_replace("/(ì|í|ị|ỉ|ĩ)/", 'i', $string);
+    $string = preg_replace("/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/", 'o', $string);
+    $string = preg_replace("/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/", 'u', $string);
+    $string = preg_replace("/(ỳ|ý|ỵ|ỷ|ỹ)/", 'y', $string);
+    $string = preg_replace("/(đ)/", 'd', $string);
+    
     $string = strtolower($string);
     $string = preg_replace('/[^a-z0-9\s-]/', '', $string);
     $string = preg_replace('/[\s-]+/', '-', $string);
@@ -118,7 +140,7 @@ function check_admin() {
 }
 
 /**
- * Lấy thông tin giỏ hàng
+ * Lấy số lượng sản phẩm trong giỏ hàng
  */
 function get_cart_count() {
     global $conn;
@@ -138,6 +160,156 @@ function get_cart_count() {
     return $row['total'] ?? 0;
 }
 
+/**
+ * Tạo mã đơn hàng ngẫu nhiên
+ * VD: "DH20258888"
+ */
+function generate_order_code() {
+    $year = date('Y');
+    $random = rand(1000, 9999);
+    return "DH{$year}{$random}";
+}
+
+/**
+ * Gửi email (cần cấu hình SMTP)
+ */
+function send_email($to, $subject, $message) {
+    // TODO: Implement email functionality
+    // Có thể sử dụng PHPMailer hoặc mail() function
+    return true;
+}
+
+/**
+ * Upload hình ảnh
+ */
+function upload_image($file, $target_dir = 'imginstock/') {
+    $target_file = $target_dir . basename($file["name"]);
+    $imageFileType = strtolower(pathinfo($target_file, PATHINFO_EXTENSION));
+    
+    // Kiểm tra file có phải ảnh không
+    $check = getimagesize($file["tmp_name"]);
+    if($check === false) {
+        return ["success" => false, "message" => "File không phải là hình ảnh."];
+    }
+    
+    // Kiểm tra kích thước file (giới hạn 5MB)
+    if ($file["size"] > 5000000) {
+        return ["success" => false, "message" => "File quá lớn. Tối đa 5MB."];
+    }
+    
+    // Chỉ cho phép một số định dạng nhất định
+    if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg" && $imageFileType != "gif" ) {
+        return ["success" => false, "message" => "Chỉ cho phép JPG, JPEG, PNG & GIF."];
+    }
+    
+    // Đổi tên file để tránh trùng lặp
+    $new_filename = uniqid() . '.' . $imageFileType;
+    $target_file = $target_dir . $new_filename;
+    
+    if (move_uploaded_file($file["tmp_name"], $target_file)) {
+        return ["success" => true, "filename" => $new_filename];
+    } else {
+        return ["success" => false, "message" => "Có lỗi khi upload file."];
+    }
+}
+
+/**
+ * Phân trang
+ */
+function paginate($total_records, $records_per_page, $current_page) {
+    $total_pages = ceil($total_records / $records_per_page);
+    $offset = ($current_page - 1) * $records_per_page;
+    
+    return [
+        'total_pages' => $total_pages,
+        'offset' => $offset,
+        'current_page' => $current_page
+    ];
+}
+
+/**
+ * Tính phần trăm giảm giá
+ */
+function calculate_discount_percent($original_price, $sale_price) {
+    $original = price_to_number($original_price);
+    $sale = price_to_number($sale_price);
+    
+    if ($original == 0) return 0;
+    
+    $discount = (($original - $sale) / $original) * 100;
+    return round($discount);
+}
+
+/**
+ * Kiểm tra sản phẩm còn hàng không
+ */
+function check_stock($product_id) {
+    global $conn;
+    
+    $sql = "SELECT so_luong_ton FROM san_pham WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    
+    return $row['so_luong_ton'] > 0;
+}
+
+/**
+ * Lấy thông tin sản phẩm theo ID
+ */
+function get_product_by_id($product_id) {
+    global $conn;
+    
+    $sql = "SELECT * FROM san_pham WHERE id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    return $result->fetch_assoc();
+}
+
+/**
+ * Cập nhật số lượng tồn kho
+ */
+function update_stock($product_id, $quantity, $operation = 'decrease') {
+    global $conn;
+    
+    if ($operation == 'decrease') {
+        $sql = "UPDATE san_pham SET so_luong_ton = so_luong_ton - ? WHERE id = ?";
+    } else {
+        $sql = "UPDATE san_pham SET so_luong_ton = so_luong_ton + ? WHERE id = ?";
+    }
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $quantity, $product_id);
+    return $stmt->execute();
+}
+
+/**
+ * Ghi log hoạt động (cho admin)
+ */
+function log_activity($user_id, $action, $description) {
+    global $conn;
+    
+    // TODO: Tạo bảng activity_log nếu cần
+    // INSERT INTO activity_log (user_id, action, description, created_at)
+    
+    error_log("User $user_id: $action - $description");
+}
+
+/**
+ * Làm sạch chuỗi tìm kiếm
+ */
+function clean_search_string($string) {
+    $string = trim($string);
+    $string = strip_tags($string);
+    $string = htmlspecialchars($string);
+    return $string;
+}
+
 // =============================================
 // KHỞI TẠO SESSION
 // =============================================
@@ -145,5 +317,27 @@ function get_cart_count() {
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// =============================================
+// CÁC HẰNG SỐ THƯỜNG DÙNG
+// =============================================
+
+define('SITE_NAME', 'Null Eater Store');
+define('SITE_URL', 'http://localhost/null_eater_store/');
+define('ADMIN_EMAIL', 'admin@nulleater.com');
+define('ITEMS_PER_PAGE', 12);
+define('UPLOAD_MAX_SIZE', 5242880); // 5MB
+
+// =============================================
+// ERROR REPORTING (Chỉ bật khi development)
+// =============================================
+
+// Uncomment dòng dưới khi đang phát triển để xem lỗi
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+
+// Comment dòng dưới khi đã deploy production
+error_reporting(0);
+ini_set('display_errors', 0);
 
 ?>
