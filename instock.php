@@ -186,8 +186,6 @@ $stmt->close();
             
             // TODO: Gửi AJAX request để thêm vào giỏ hàng trong database
             console.log('Thêm sản phẩm ID:', id, 'Số lượng:', soLuong);
-            
-            // Có thể thêm code AJAX ở đây để cập nhật giỏ hàng
         }
     </script>
 </body>

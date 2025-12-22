@@ -358,7 +358,7 @@ $result_list = $conn->query($sql_list);
     <script>
         function xoaSanPham(id, ten) {
             if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này?\n\nID: ' + id + '\nTên: ' + ten + '\n\nHành động này không thể hoàn tác!')) {
-                window.location.href = 'delete_product.php?id=' + id;
+                window.location.href = 'deleteinstock.php?id=' + id;
             }
         }
     </script>
