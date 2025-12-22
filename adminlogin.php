@@ -14,8 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = trim($_POST['password']);
     
     // Kiểm tra tài khoản admin
-    // Email: admin@gmail.com | Password: 123
-    if ($email === "admin@gmail.com" && $password === "123") {
+    // Email: admin@nulleater.com | Password: 123
+    if ($email === "admin@nulleater.com" && $password === "123") {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_email'] = $email;
         $_SESSION['admin_username'] = "Admin";
@@ -198,7 +198,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="admin-info">
             <i class="fa-solid fa-info-circle"></i> 
             <strong>Tài khoản admin:</strong><br>
-            Email: <strong>admin@gmail.com</strong><br>
+            Email: <strong>admin@nulleater.com</strong><br>
             Password: <strong>123</strong>
         </div>
         
