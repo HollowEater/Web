@@ -1,35 +1,31 @@
 <?php
 require_once 'config.php';
 
-// Lấy tham số lọc từ URL
 $muc_gia = isset($_GET['muc_gia']) ? $_GET['muc_gia'] : 'all';
 $chon_char = isset($_GET['chon_char']) ? $_GET['chon_char'] : 'all';
 
-// Xây dựng câu truy vấn SQL
 $sql = "SELECT * FROM san_pham WHERE 1=1";
 $params = [];
 $types = "";
 
-// Lọc theo nhân vật
 if ($chon_char != 'all') {
     $sql .= " AND nhan_vat = ?";
     $params[] = $chon_char;
     $types .= "s";
 }
 
-// Lọc theo giá - Chuyển đổi giá từ string sang số để so sánh
 if ($muc_gia != 'all') {
     switch ($muc_gia) {
-        case '1': // Dưới 500k
+        case '1':
             $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) < 500000";
             break;
-        case '2': // 500k - 2 triệu
+        case '2': 
             $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 500000 AND 2000000";
             break;
-        case '3': // 2 triệu - 5 triệu
+        case '3': 
             $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 2000001 AND 5000000";
             break;
-        case '4': // Trên 5 triệu
+        case '4': 
             $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) > 5000000";
             break;
     }

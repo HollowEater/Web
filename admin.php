@@ -1,8 +1,23 @@
 <?php
+session_start();
+
+// Kiểm tra đăng nhập admin
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header("Location: admin_login.php");
+    exit();
+}
+
 require_once 'config.php';
 
-$thong_bao = "";
-$loai_thong_bao = ""; // success hoặc error
+// Lấy thông báo từ session (nếu có từ trang delete)
+$thong_bao = isset($_SESSION['thong_bao']) ? $_SESSION['thong_bao'] : "";
+$loai_thong_bao = isset($_SESSION['loai_thong_bao']) ? $_SESSION['loai_thong_bao'] : "";
+
+// Xóa thông báo khỏi session sau khi hiển thị
+if (!empty($thong_bao)) {
+    unset($_SESSION['thong_bao']);
+    unset($_SESSION['loai_thong_bao']);
+}
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Lấy dữ liệu từ form
@@ -173,9 +188,24 @@ $result_list = $conn->query($sql_list);
 
         <div class="admin-container">
 
-            <h1 style="text-align: center; color: #333; margin-bottom: 10px;">
-                <i class="fa-solid fa-box"></i> QUẢN LÝ KHO HÀNG
-            </h1>
+            <!-- Header với nút đăng xuất -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div>
+                    <h1 style="text-align: left; color: #333; margin: 0;">
+                        <i class="fa-solid fa-box"></i> QUẢN LÝ KHO HÀNG
+                    </h1>
+                    <div style="font-size: 14px; color: #888; margin-top: 5px;">
+                        <i class="fa-solid fa-user-shield"></i> Xin chào, <strong style="color: #39c5bb;"><?php echo $_SESSION['admin_username']; ?></strong>
+                    </div>
+                </div>
+                <a href="admin_logout.php" 
+                   style="background: #dc3545; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 8px;"
+                   onmouseover="this.style.backgroundColor='#c82333'"
+                   onmouseout="this.style.backgroundColor='#dc3545'"
+                   onclick="return confirm('Bạn có chắc muốn đăng xuất?')">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                </a>
+            </div>
             
             <div style="text-align: center; margin-bottom: 30px; font-size: 14px; color: #888;">
                 <span>Nhập thông tin sản phẩm để thêm vào Database</span>
@@ -304,6 +334,12 @@ $result_list = $conn->query($sql_list);
                             </span>
                         </div>
                     </div>
+                    <button onclick="xoaSanPham(<?php echo $row['id']; ?>, '<?php echo addslashes($row['ten']); ?>')" 
+                            style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; gap: 5px;"
+                            onmouseover="this.style.backgroundColor='#c82333'"
+                            onmouseout="this.style.backgroundColor='#dc3545'">
+                        <i class="fa-solid fa-trash"></i> Xóa
+                    </button>
                 </div>
                 <?php endwhile; ?>
                 <div style="text-align: center; margin-top: 15px;">
@@ -318,6 +354,14 @@ $result_list = $conn->query($sql_list);
     </div>
 
     <?php include 'footer.php'; ?>
+
+    <script>
+        function xoaSanPham(id, ten) {
+            if (confirm('Bạn có chắc chắn muốn xóa sản phẩm này?\n\nID: ' + id + '\nTên: ' + ten + '\n\nHành động này không thể hoàn tác!')) {
+                window.location.href = 'delete_product.php?id=' + id;
+            }
+        }
+    </script>
 
 </body>
 </html>
