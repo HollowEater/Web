@@ -1,12 +1,32 @@
 <?php
+session_start();
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $email = trim($_POST['email']);
+    $password = trim($_POST['password']);
     
-    // Sau này code lưu vào Database sẽ viết ở đây.
-    
-    echo "<script>
-            alert('Đăng nhập thành công! Mời bạn mua sắm.');
-            window.location.href = 'login.php';
-          </script>";
+    // Kiểm tra nếu là tài khoản admin
+    if ($email === "admin@gmail.com" && $password === "123") {
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_email'] = $email;
+        $_SESSION['admin_username'] = "Admin";
+        
+        // Chuyển đến trang quản lý admin
+        echo "<script>
+                alert('Đăng nhập Admin thành công!');
+                window.location.href = 'admin.php';
+              </script>";
+        exit();
+    } else {
+        // Đây là tài khoản khách hàng thông thường
+        // Sau này code lưu vào Database sẽ viết ở đây.
+        
+        echo "<script>
+                alert('Đăng nhập thành công! Mời bạn mua sắm.');
+                window.location.href = 'index.php';
+              </script>";
+        exit();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -33,16 +53,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <a href="index.php" style="text-decoration: none; color: #39c5bb;">Trang chủ</a> / <span>Đăng nhập tài khoản</span>
             </div>
 
-            <form action="#" method="POST">
+            <form action="" method="POST">
                 <div style="margin-bottom: 20px;">
-                    <input type="email" placeholder="Email" required
+                    <input type="email" name="email" placeholder="Email" required
                         style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; box-sizing: border-box; transition: 0.3s;"
                         onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                         onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
                 </div>
 
                 <div style="margin-bottom: 25px;">
-                    <input type="password" placeholder="Mật khẩu" required
+                    <input type="password" name="password" placeholder="Mật khẩu" required
                         style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; box-sizing: border-box; transition: 0.3s;"
                         onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                         onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
