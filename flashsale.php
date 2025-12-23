@@ -61,7 +61,7 @@
                     </div>
 
                     <div style="text-align: center;">
-                        <a href="momo/momo.php" 
+                        <a href="instock.php" 
                            style="display: block; width: 100%; background: #d63031; color: white; text-decoration: none; padding: 10px 0; font-weight: bold; border-radius: 5px; transition: 0.3s;"
                            onmouseover="this.style.background='#b71540'"
                            onmouseout="this.style.background='#d63031'">
