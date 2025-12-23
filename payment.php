@@ -32,12 +32,6 @@ while ($row = $result->fetch_assoc()) {
     $cart_items[] = $row;
 }
 
-// Nếu giỏ hàng trống, chuyển về trang giỏ hàng
-if (empty($cart_items)) {
-    header("Location: cart.php");
-    exit();
-}
-
 // 3. XỬ LÝ ĐẶT HÀNG
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Xóa sạch giỏ hàng ngay lập tức
@@ -171,7 +165,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div style="width: 40%;">
                 <div style="background: white; padding: 20px; border-radius: 10px; border: 1px solid #eee;">
                     <h3 style="margin-top: 0; padding-bottom: 15px; border-bottom: 1px solid #eee;">
-                        <i class="fa-solid fa-shopping-bag"></i> Đơn hàng (<?php echo count($cart_items); ?> sản phẩm)
+                         Đơn hàng (<?php echo count($cart_items); ?> sản phẩm)
                     </h3>
 
                     <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
