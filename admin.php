@@ -8,7 +8,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     exit();
 }
 
-// 2. XỬ LÝ XÓA SẢN PHẨM (Chạy ngay trong file này)
+// 2. XỬ LÝ XÓA SẢN PHẨM
 if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     $conn->query("DELETE FROM san_pham WHERE id = $id");
@@ -28,7 +28,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $trang_thai = $_POST['trang_thai'];
     $mo_ta = $_POST['mo_ta'];
 
-    // Câu lệnh thêm SQL
+    // --- BẮT ĐẦU ĐOẠN KIỂM TRA LOGIC ---
+    
+    // 1. Hàm con để chuyển "1.500.000đ" thành số 1500000 để so sánh
+    function laySoTuGia($chuoi_tien) {
+        return intval(str_replace(['.', ',', 'đ', ' '], '', $chuoi_tien));
+    }
+
+    $gia_so = laySoTuGia($gia); // Giá bán ra số
+
+    // 2. Kiểm tra giảm giá
+    if (!empty($giam_gia)) {
+        // Nếu giảm giá là phần trăm 
+        if (strpos($giam_gia, '%') !== false) {
+            $phan_tram = intval($giam_gia);
+            if ($phan_tram > 100 || $phan_tram < 0) {
+                echo "<script>alert('Lỗi: Giảm giá phần trăm không hợp lệ (0-100%)!'); window.history.back();</script>";
+                exit();
+            }
+        } 
+        // Nếu giảm giá là số tiền cụ thể 
+        else {
+            $giam_gia_so = laySoTuGia($giam_gia);
+            if ($giam_gia_so >= $gia_so) {
+                echo "<script>alert('Lỗi: Số tiền giảm giá'); window.history.back();</script>";
+                exit();
+            }
+        }
+    }
+
+    // 3. Kiểm tra Giá cũ 
+    if (!empty($gia_cu)) {
+        $gia_cu_so = laySoTuGia($gia_cu);
+        if ($gia_cu_so < $gia_so) {
+             echo "<script>alert('Lỗi logic: Giá cũ ($gia_cu) không thể nhỏ hơn Giá bán hiện tại ($gia)!'); window.history.back();</script>";
+             exit();
+        }
+    }
+
     $sql = "INSERT INTO san_pham (ten, hinh, gia, gia_cu, giam_gia, nhan_vat, so_luong_ton, trang_thai, mo_ta) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
@@ -42,7 +79,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// 4. Lấy danh sách sản phẩm để hiện bên dưới
 $result_list = $conn->query("SELECT * FROM san_pham ORDER BY id DESC LIMIT 10");
 ?>
 
@@ -113,14 +149,14 @@ $result_list = $conn->query("SELECT * FROM san_pham ORDER BY id DESC LIMIT 10");
                 <div class="row-3-col">
                     <div class="col form-group">
                         <label class="form-label">Giá bán</label>
-                        <input type="text" name="gia" class="form-input" required>
+                        <input type="text" name="gia" class="form-input"  required>
                     </div>
                     <div class="col form-group">
                         <label class="form-label">Giá cũ</label>
-                        <input type="text" name="gia_cu" class="form-input">
+                        <input type="text" name="gia_cu" class="form-input" >
                     </div>
                     <div class="col form-group">
-                        <label class="form-label">Giảm giá</label>
+                        <label class="form-label">Giảm giá %</label>
                         <input type="text" name="giam_gia" class="form-input">
                     </div>
                 </div>
@@ -175,10 +211,11 @@ $result_list = $conn->query("SELECT * FROM san_pham ORDER BY id DESC LIMIT 10");
                     <a href="instock.php" style="color: #39c5bb; font-weight: bold; text-decoration: none;">Xem trang cửa hàng &rarr;</a>
                 </div>
             </div>
+
         </div>
     </div>
-    <?php include 'footer.php'; //if (!is_numeric($gia)) {
-       // echo "<script>alert('Lỗi: Giá bán phải là một con số (Ví dụ: 100000)!'); window.history.back();</script>";
-       // exit(); }?>
+
+    <?php include 'footer.php'; ?>
+
 </body>
 </html>
