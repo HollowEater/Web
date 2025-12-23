@@ -2,59 +2,58 @@
 session_start();
 require_once 'config.php';
 
-// 1. Kiểm tra đăng nhập
+// 1. KIỂM TRA ĐĂNG NHẬP
 if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true) {
     header("Location: login.php");
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
-// Xử lý Xóa sản phẩm
-if (isset($_GET['action']) && $_GET['action'] == 'del' && isset($_GET['id'])) {
-    $id_cart = intval($_GET['id']);
-    $conn->query("DELETE FROM gio_hang WHERE id = $id_cart AND id_nguoi_dung = $user_id");
-    header("Location: cart.php"); // Load lại trang để cập nhật
+
+if (isset($_GET['action']) && isset($_GET['id'])) {
+    $cart_id = intval($_GET['id']);
+    $action = $_GET['action'];
+
+    // Xử lý Xóa
+    if ($action == 'del') {
+        $conn->query("DELETE FROM gio_hang WHERE id = $cart_id AND id_nguoi_dung = $user_id");
+    }
+
+    // Xử lý Tăng/Giảm
+    elseif ($action == 'inc' || $action == 'dec') {
+        // Kiểm tra tồn kho trước khi tăng
+        $check = $conn->query("SELECT gh.so_luong, sp.so_luong_ton FROM gio_hang gh JOIN san_pham sp ON gh.id_san_pham = sp.id WHERE gh.id = $cart_id");
+
+        if ($check->num_rows > 0) {
+            $curr = $check->fetch_assoc();
+
+            if ($action == 'inc') {
+                if ($curr['so_luong'] < $curr['so_luong_ton']) {
+                    $conn->query("UPDATE gio_hang SET so_luong = so_luong + 1 WHERE id = $cart_id");
+                } else {
+                    echo "<script>alert('Số lượng đã đạt giới hạn tồn kho!');</script>";
+                }
+            } elseif ($action == 'dec') {
+                if ($curr['so_luong'] > 1) {
+                    $conn->query("UPDATE gio_hang SET so_luong = so_luong - 1 WHERE id = $cart_id");
+                }
+            }
+        }
+    }
+
+    // Load lại trang để cập nhật số liệu
+    echo "<script>window.location.href = 'cart.php';</script>";
     exit();
 }
-
-// Xử lý Tăng/Giảm số lượng
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id_cart = intval($_GET['id']);
-    
-    // Lấy thông tin hiện tại để kiểm tra tồn kho
-    $check = $conn->query("SELECT gh.so_luong, sp.so_luong_ton FROM gio_hang gh JOIN san_pham sp ON gh.id_san_pham = sp.id WHERE gh.id = $id_cart");
-    
-    if ($check->num_rows > 0) {
-        $curr = $check->fetch_assoc();
-        $sl_hien_tai = $curr['so_luong'];
-        $ton_kho = $curr['so_luong_ton'];
-
-        // Tăng
-        if ($_GET['action'] == 'inc') {
-            if ($sl_hien_tai < $ton_kho) {
-                $conn->query("UPDATE gio_hang SET so_luong = so_luong + 1 WHERE id = $id_cart");
-            } else {
-                echo "<script>alert('Đã đạt giới hạn tồn kho!');</script>";
-            }
-        }
-        // Giảm
-        elseif ($_GET['action'] == 'dec') {
-            if ($sl_hien_tai > 1) {
-                $conn->query("UPDATE gio_hang SET so_luong = so_luong - 1 WHERE id = $id_cart");
-            }
-        }
-        header("Location: cart.php");
-        exit();
-    }
-}
-// LẤY DỮ LIỆU GIỎ HÀNG ĐỂ HIỂN THỊ
+// 3. LẤY DỮ LIỆU GIỎ HÀNG ĐỂ HIỂN THỊ
 $cart_items = [];
 $total_amount = 0;
 
-$sql = "SELECT gh.id as cart_id, gh.so_luong, sp.ten, sp.hinh, sp.gia, sp.gia_cu, sp.giam_gia, sp.so_luong_ton 
+$sql = "SELECT gh.id as cart_id, gh.so_luong, sp.ten, sp.hinh, sp.gia, sp.giam_gia, sp.so_luong_ton 
         FROM gio_hang gh 
-        INNER JOIN san_pham sp ON gh.id_san_pham = sp.id 
-        WHERE gh.id_nguoi_dung = ? ORDER BY gh.ngay_them DESC";
+        JOIN san_pham sp ON gh.id_san_pham = sp.id 
+        WHERE gh.id_nguoi_dung = ? 
+        ORDER BY gh.ngay_them DESC";
 
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $user_id);
@@ -62,7 +61,8 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 while ($row = $result->fetch_assoc()) {
-    $price = price_to_number($row['gia']);
+    // Xử lý giá tiền để tính toán (Bỏ dấu chấm, chữ đ)
+    $price = intval(str_replace(['.', 'đ', ','], '', $row['gia']));
     $row['subtotal'] = $price * $row['so_luong'];
     $total_amount += $row['subtotal'];
     $cart_items[] = $row;
@@ -71,125 +71,199 @@ while ($row = $result->fetch_assoc()) {
 
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giỏ hàng</title>
+    <title>Giỏ hàng của tôi</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .cart-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            display: flex;
+            gap: 30px;
+            padding: 0 20px;
+        }
+
+        .cart-left {
+            width: 65%;
+        }
+
+        .cart-right {
+            width: 35%;
+        }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #39c5bb;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cart-item {
+            background: white;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .item-img {
+            width: 100px;
+            height: 100px;
+            border-radius: 5px;
+            border: 1px solid #eee;
+            object-fit: cover;
+        }
+
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qty-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .qty-input {
+            width: 40px;
+            height: 28px;
+            text-align: center;
+            border: 1px solid #ddd;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+
+        .summary-box {
+            background: white;
+            padding: 25px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+    </style>
 </head>
 
 <body style="margin: 0; background-color: #f9f9f9; font-family: Arial, sans-serif;">
 
     <?php include 'header.php'; ?>
 
-    <div style="max-width: 1200px; margin: 50px auto; display: flex; gap: 30px; padding: 0 20px;">
+    <div class="cart-container">
 
-        <div style="width: 65%;">
-
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #39c5bb; padding-bottom: 10px; margin-bottom: 20px;">
-                <h2 style="margin: 0; font-size: 24px; color: #39c5bb;">Giỏ hàng:</h2>
-                <span style="color: #888;"><?php echo count($cart_items); ?> Sản phẩm</span>
+        <div class="cart-left">
+            <div class="cart-header">
+                <h2 style="margin: 0; color: #333; font-size: 24px;">Giỏ hàng</h2>
+                <span style="color: #666;"><?php echo count($cart_items); ?> sản phẩm</span>
             </div>
 
             <?php if (empty($cart_items)): ?>
-                <div style="background: white; padding: 50px 20px; text-align: center; border: 1px solid #eee; border-radius: 5px;">
-                    <p style="color: #333; margin-bottom: 20px;">
-                        Giỏ hàng của bạn đang trống.
-                        <a href="instock.php" style="color: #d32f2f; text-decoration: none; font-weight: bold;">Mua ngay</a>.
-                    </p>
+                <div style="background: white; padding: 50px; text-align: center; border-radius: 8px; border: 1px solid #eee;">
+                    <i class="fa-solid fa-cart-arrow-down" style="font-size: 50px; color: #ddd; margin-bottom: 20px;"></i>
+                    <p style="font-size: 18px; color: #555;">Giỏ hàng của bạn đang trống!</p>
+                    <a href="instock.php" style="display: inline-block; margin-top: 10px; color: white; background: #39c5bb; padding: 10px 25px; text-decoration: none; border-radius: 30px; font-weight: bold;">
+                        Mua sắm ngay
+                    </a>
                 </div>
             <?php else: ?>
                 <?php foreach ($cart_items as $item): ?>
-                <div style="background: white; padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 15px; align-items: center;">
-                    
-                    <div style="width: 100px; height: 100px; border: 1px solid #eee; border-radius: 5px; overflow: hidden;">
-                        <img src="imginstock/<?php echo $item['hinh']; ?>" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='img/no-image.jpg'">
-                    </div>
-                    
-                    <div style="flex: 1;">
-                        <h3 style="margin: 0 0 5px 0; font-size: 16px; color: #333;"><?php echo $item['ten']; ?></h3>
-                        <div style="font-size: 13px; color: #888; margin-bottom: 10px;">
-                            <?php if (!empty($item['giam_gia'])): ?>
-                                <span style="background: #ff4757; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
-                                    <?php echo $item['giam_gia']; ?>
+                    <div class="cart-item">
+                        <img src="imginstock/<?php echo $item['hinh']; ?>" class="item-img" onerror="this.src='img/no-image.jpg'">
+
+                        <div style="flex: 1;">
+                            <h3 style="margin: 0 0 5px 0; font-size: 16px; color: #333;">
+                                <?php echo $item['ten']; ?>
+                            </h3>
+                            <div style="font-size: 12px; color: #888;">
+                                <?php if ($item['giam_gia']): ?>
+                                    <span style="background: #ff6b6b; color: white; padding: 2px 6px; border-radius: 3px;">
+                                        Giảm <?php echo $item['giam_gia']; ?>
+                                    </span>
+                                <?php endif; ?>
+                                <span style="margin-left: <?php echo $item['giam_gia'] ? '10px' : '0'; ?>;">
+                                    Kho: <?php echo $item['so_luong_ton']; ?>
                                 </span>
-                            <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div style="text-align: center; min-width: 150px;">
-                        <div style="font-weight: bold; color: #e74c3c; font-size: 18px; margin-bottom: 10px;">
-                            <?php echo $item['gia']; ?>
-                        </div>
-                        
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px; margin-bottom: 10px;">
-                            <a href="cart.php?action=dec&id=<?php echo $item['cart_id']; ?>" 
-                               style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; border-radius: 3px;">
-                                <i class="fa-solid fa-minus"></i>
-                            </a>
 
-                            <input type="text" value="<?php echo $item['so_luong']; ?>" readonly
-                                   style="width: 40px; height: 30px; text-align: center; border: 1px solid #ddd; border-radius: 3px;">
+                        <div style="text-align: center; min-width: 120px;">
+                            <div style="font-weight: bold; color: #e74c3c; font-size: 16px; margin-bottom: 8px;">
+                                <?php echo $item['gia']; ?>
+                            </div>
 
-                            <a href="cart.php?action=inc&id=<?php echo $item['cart_id']; ?>" 
-                               style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #333; border-radius: 3px;">
-                                <i class="fa-solid fa-plus"></i>
-                            </a>
+                            <div style="display: flex; align-items: center; justify-content: center;">
+                                <a href="cart.php?action=dec&id=<?php echo $item['cart_id']; ?>" class="qty-btn"><i class="fa-solid fa-minus"></i></a>
+                                <input type="text" value="<?php echo $item['so_luong']; ?>" readonly class="qty-input">
+                                <a href="cart.php?action=inc&id=<?php echo $item['cart_id']; ?>" class="qty-btn"><i class="fa-solid fa-plus"></i></a>
+                            </div>
                         </div>
-                        
-                        <div style="font-size: 14px; color: #666;">
-                            Tổng: <strong style="color: #39c5bb;"><?php echo number_format($item['subtotal'], 0, ',', '.'); ?>đ</strong>
-                        </div>
+
+                        <a href="cart.php?action=del&id=<?php echo $item['cart_id']; ?>"
+                            onclick="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?')"
+                            style="color: #999; padding: 10px; margin-left: 10px; transition: 0.2s;"
+                            onmouseover="this.style.color='#e74c3c'" onmouseout="this.style.color='#999'">
+                            <i class="fa-solid fa-trash-can" style="font-size: 18px;"></i>
+                        </a>
                     </div>
-                    
-                    <a href="cart.php?action=del&id=<?php echo $item['cart_id']; ?>" 
-                       onclick="return confirm('Bạn có chắc muốn xóa không?');"
-                       style="background: #e74c3c; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; text-decoration: none; display: inline-block;">
-                        <i class="fa-solid fa-trash"></i>
-                    </a>
-                </div>
                 <?php endforeach; ?>
             <?php endif; ?>
-
         </div>
 
-        <div style="width: 35%;">
-            <div style="background: white; border: 3px solid #39c5bb; border-radius: 10px; margin-bottom: 10px;">
-                <img src="img/cart.jpg" style="width: 100%; height: auto; border-radius: 5px; display: block;">
-            </div>
-
-            <div style="background: white; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-                <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+        <div class="cart-right">
+            <div class="summary-box">
+                <div style="background: white; border: 3px solid #39c5bb; border-radius: 10px; margin-bottom: 10px;">
+                    <img src="img/cart.jpg" style="width: 100%; height: auto; border-radius: 5px; display: block;">
+                </div>
+                <h3 style="margin: 0 0 20px 0; padding-bottom: 15px; border-bottom: 1px solid #eee; font-size: 18px;">
                     Thông tin đơn hàng
                 </h3>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <span style="font-weight: bold; color: #333; font-size: 16px;">Tổng tiền:</span>
-                    <span style="font-weight: bold; color: #d32f2f; font-size: 24px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <span style="color: #555; font-weight: bold;">Tạm tính:</span>
+                    <span style="color: #e74c3c; font-weight: bold; font-size: 20px;">
                         <?php echo number_format($total_amount, 0, ',', '.'); ?>đ
                     </span>
                 </div>
 
                 <?php if (!empty($cart_items)): ?>
-                    <a href="payment.php" style="display: block; width: 100%; background: #39c5bb; color: white; text-align: center; text-decoration: none; padding: 15px 0; font-weight: bold; font-size: 16px; border-radius: 5px; transition: 0.3s;"
-                       onmouseover="this.style.backgroundColor='#2ca99f'"
-                       onmouseout="this.style.backgroundColor='#39c5bb'">
-                        THANH TOÁN NGAY
+                    <a href="payment.php" style="display: block; width: 100%; background: #39c5bb; color: white; text-align: center; text-decoration: none; padding: 15px 0; font-weight: bold; border-radius: 30px; transition: 0.3s; box-sizing: border-box;"
+                        onmouseover="this.style.backgroundColor='#2ca99f'; this.style.transform='translateY(-2px)'"
+                        onmouseout="this.style.backgroundColor='#39c5bb'; this.style.transform='translateY(0)'">
+                        TIẾN HÀNH THANH TOÁN
                     </a>
                 <?php else: ?>
-                    <button disabled style="width: 100%; background: #ccc; color: #666; padding: 15px 0; font-weight: bold; border: none; border-radius: 5px; cursor: not-allowed;">
-                        THANH TOÁN NGAY
+                    <button disabled style="width: 100%; background: #ccc; color: white; padding: 15px 0; font-weight: bold; border: none; border-radius: 30px; cursor: not-allowed;">
+                        TIẾN HÀNH THANH TOÁN
                     </button>
                 <?php endif; ?>
 
-                <div style="text-align: center; margin-top: 15px;">
-                    <a href="instock.php" style="text-decoration: none; color: #39c5bb; font-size: 14px; font-weight: bold;">
-                        <i class="fa-solid fa-arrow-left"></i> Tiếp tục mua hàng
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="instock.php" style="text-decoration: none; color: #39c5bb; font-weight: bold; font-size: 14px;">
+                        <i class="fa-solid fa-arrow-left"></i> Tiếp tục xem hàng
                     </a>
                 </div>
             </div>
         </div>
+
     </div>
+
     <?php include 'footer.php'; ?>
+
 </body>
+
 </html>

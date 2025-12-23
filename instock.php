@@ -1,6 +1,54 @@
 <?php
+session_start();
 require_once 'config.php';
+// 1. XỬ LÝ THÊM VÀO GIỎ HÀNG 
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_to_cart'])) {
+    
+    // Kiểm tra đăng nhập
+    if (!isset($_SESSION['user_logged_in']) || $_SESSION['user_logged_in'] !== true) {
+        echo "<script>
+                if(confirm('Bạn cần đăng nhập để mua hàng. Đến trang đăng nhập ngay?')){
+                    window.location.href = 'login.php';
+                }
+              </script>";
+    } else {
+        $user_id = $_SESSION['user_id'];
+        $product_id = intval($_POST['product_id']);
+        $quantity = intval($_POST['quantity']);
 
+        // Kiểm tra tồn kho
+        $check_stock = $conn->query("SELECT so_luong_ton FROM san_pham WHERE id = $product_id");
+        $stock = $check_stock->fetch_assoc();
+
+        if ($stock && $stock['so_luong_ton'] >= $quantity) {
+            // Kiểm tra sản phẩm đã có trong giỏ chưa
+            $check_cart = $conn->query("SELECT id, so_luong FROM gio_hang WHERE id_nguoi_dung = $user_id AND id_san_pham = $product_id");
+            
+            if ($check_cart->num_rows > 0) {
+                // Đã có -> Cộng dồn
+                $cart = $check_cart->fetch_assoc();
+                $new_qty = $cart['so_luong'] + $quantity;
+                if ($new_qty <= $stock['so_luong_ton']) {
+                    $conn->query("UPDATE gio_hang SET so_luong = $new_qty WHERE id = " . $cart['id']);
+                    echo "<script>alert('Đã cập nhật số lượng trong giỏ hàng!');</script>";
+                } else {
+                    echo "<script>alert('Số lượng trong giỏ vượt quá tồn kho!');</script>";
+                }
+            } else {
+                // Chưa có -> Thêm mới
+                $conn->query("INSERT INTO gio_hang (id_nguoi_dung, id_san_pham, so_luong) VALUES ($user_id, $product_id, $quantity)");
+                echo "<script>alert('Đã thêm vào giỏ hàng thành công!');</script>";
+            }
+            
+            // Refresh lại trang để tránh gửi lại form khi F5
+            echo "<script>window.location.href = window.location.href;</script>";
+            
+        } else {
+            echo "<script>alert('Sản phẩm này không đủ số lượng tồn kho!');</script>";
+        }
+    }
+}
+// 2. LẤY DANH SÁCH SẢN PHẨM (Giữ nguyên logic lọc cũ của bạn)
 $muc_gia = isset($_GET['muc_gia']) ? $_GET['muc_gia'] : 'all';
 $chon_char = isset($_GET['chon_char']) ? $_GET['chon_char'] : 'all';
 
@@ -16,32 +64,21 @@ if ($chon_char != 'all') {
 
 if ($muc_gia != 'all') {
     switch ($muc_gia) {
-        case '1':
-            $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) < 500000";
-            break;
-        case '2': 
-            $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 500000 AND 2000000";
-            break;
-        case '3': 
-            $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 2000001 AND 5000000";
-            break;
-        case '4': 
-            $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) > 5000000";
-            break;
+        case '1': $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) < 500000"; break;
+        case '2': $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 500000 AND 2000000"; break;
+        case '3': $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) BETWEEN 2000001 AND 5000000"; break;
+        case '4': $sql .= " AND CAST(REPLACE(REPLACE(gia, '.', ''), 'đ', '') AS UNSIGNED) > 5000000"; break;
     }
 }
 
 $sql .= " ORDER BY id DESC";
 
-// Chuẩn bị và thực thi truy vấn
 $stmt = $conn->prepare($sql);
 if (!empty($params)) {
     $stmt->bind_param($types, ...$params);
 }
 $stmt->execute();
 $result = $stmt->get_result();
-
-// Lưu kết quả vào mảng
 $danh_sach_hien_thi = [];
 while ($row = $result->fetch_assoc()) {
     $danh_sach_hien_thi[] = $row;
@@ -128,18 +165,23 @@ $stmt->close();
                                 <?php endif; ?>
                             </div>
                             
-                            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-                                <button onclick="giamSoLuong(this)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: bold;">-</button>
-                                <input type="text" value="1" style="width: 40px; height: 30px; text-align: center; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; border-left: none; border-right: none;">
-                                <button onclick="tangSoLuong(this)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: bold;">+</button>
-                            </div>
+                            <form method="POST" action="">
+                                <input type="hidden" name="product_id" value="<?php echo $sp['id']; ?>">
+                                <input type="hidden" name="add_to_cart" value="1">
+                                
+                                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                                    <button type="button" onclick="giamSoLuong(this)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: bold;">-</button>
+                                    <input type="text" name="quantity" value="1" style="width: 40px; height: 30px; text-align: center; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; border-left: none; border-right: none;">
+                                    <button type="button" onclick="tangSoLuong(this)" style="width: 30px; height: 30px; border: 1px solid #ddd; background: white; cursor: pointer; font-weight: bold;">+</button>
+                                </div>
 
-                            <button style="width: 100%; background: #39c5bb; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s;" 
-                                    onmouseover="this.style.backgroundColor='#2ca99f'" 
-                                    onmouseout="this.style.backgroundColor='#39c5bb'"
-                                    onclick="themVaoGio(<?php echo $sp['id']; ?>, this)">
-                                <i class="fa-solid fa-cart-plus"></i> THÊM VÀO GIỎ
-                            </button>
+                                <button type="submit" style="width: 100%; background: #39c5bb; color: white; border: none; padding: 10px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s;" 
+                                        onmouseover="this.style.backgroundColor='#2ca99f'" 
+                                        onmouseout="this.style.backgroundColor='#39c5bb'">
+                                    <i class="fa-solid fa-cart-plus"></i> THÊM VÀO GIỎ
+                                </button>
+                            </form>
+
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -171,56 +213,6 @@ $stmt->close();
                 input.value = value - 1;
             }
         }
-
-function themVaoGio(id, btn) {
-    var soLuong = btn.parentElement.querySelector('input').value;
-    
-    // Gửi AJAX request
-    fetch('add_to_cart.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'product_id=' + id + '&quantity=' + soLuong
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Hiệu ứng thêm vào giỏ
-            btn.innerHTML = '<i class="fa-solid fa-check"></i> ĐÃ THÊM';
-            btn.style.backgroundColor = '#2ecc71';
-            
-            // Cập nhật số lượng giỏ hàng ở header
-            updateCartCount(data.cart_count);
-            
-            setTimeout(function() {
-                btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i> THÊM VÀO GIỎ';
-                btn.style.backgroundColor = '#39c5bb';
-            }, 1500);
-        } else {
-            if (data.require_login) {
-                // Yêu cầu đăng nhập
-                if (confirm(data.message + '\nBạn có muốn đến trang đăng nhập?')) {
-                    window.location.href = 'login.php';
-                }
-            } else {
-                alert(data.message);
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra. Vui lòng thử lại!');
-    });
-}
-
-function updateCartCount(count) {
-    // Cập nhật số lượng hiển thị trên header
-    var cartText = document.querySelector('[href="cart.php"] span');
-    if (cartText) {
-        cartText.textContent = 'Giỏ hàng (' + count + ')';
-    }
-}
     </script>
 </body>
 </html>
