@@ -1,5 +1,4 @@
 <?php 
-// Khởi tạo session nếu chưa có
 if (!session_id()) {
     session_start();
 }
