@@ -26,13 +26,9 @@ try {
     die("Không thể kết nối database. Vui lòng thử lại sau.");
 }
 
-// =============================================
 // HÀM HỖ TRỢ
-// =============================================
 
-/**
- * Làm sạch dữ liệu đầu vào để tránh SQL Injection và XSS
- */
+/* Làm sạch dữ liệu đầu vào */
 function clean_input($data) {
     global $conn;
     $data = trim($data);

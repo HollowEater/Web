@@ -129,7 +129,7 @@ if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true) 
         document.getElementById("bangmenu").style.display = "none";
     }
     
-    // Hàm cập nhật số lượng giỏ hàng (gọi từ AJAX)
+    // Hàm cập nhật số lượng giỏ hàng
     function updateCartCount(count) {
         var cartDisplay = document.getElementById("cart-count-display");
         if (cartDisplay) {
