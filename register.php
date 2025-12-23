@@ -1,25 +1,54 @@
 <?php
+session_start();
+require_once 'config.php';
+
 $ten = "";
 $ho = "";
 $email = "";
-$loi_mat_khau = false; 
+$loi = "";
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $ten = $_POST['ten'];
-    $ho = $_POST['ho'];
-    $email = $_POST['email'];
-        $matkhau = $_POST['matkhau'];
+    $ten = clean_input($_POST['ten']);
+    $ho = clean_input($_POST['ho']);
+    $email = clean_input($_POST['email']);
+    $matkhau = $_POST['matkhau'];
     $xacnhan = $_POST['nhaplaimatkhau'];
-    if ($matkhau === $xacnhan) {
-        echo "<script>
-                alert('Đăng ký thành công! Mời bạn đăng nhập.');
-                window.location.href = 'login.php';
-              </script>";
+    
+    // Kiểm tra mật khẩu khớp
+    if ($matkhau !== $xacnhan) {
+        $loi = "password_mismatch";
     } else {
-        $loi_mat_khau = true;
+        // Kiểm tra email đã tồn tại chưa
+        $check_sql = "SELECT id FROM nguoi_dung WHERE email = ?";
+        $check_stmt = $conn->prepare($check_sql);
+        $check_stmt->bind_param("s", $email);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $loi = "email_exists";
+        } else {
+            // Mã hóa mật khẩu
+            $mat_khau_hash = password_hash($matkhau, PASSWORD_DEFAULT);
+            
+            // Thêm người dùng vào database
+            $insert_sql = "INSERT INTO nguoi_dung (ten, ho, email, mat_khau) VALUES (?, ?, ?, ?)";
+            $insert_stmt = $conn->prepare($insert_sql);
+            $insert_stmt->bind_param("ssss", $ten, $ho, $email, $mat_khau_hash);
+            
+            if ($insert_stmt->execute()) {
+                echo "<script>
+                        alert('Đăng ký thành công! Mời bạn đăng nhập.');
+                        window.location.href = 'login.php';
+                      </script>";
+                exit();
+            } else {
+                $loi = "database_error";
+            }
+        }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -43,22 +72,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <a href="index.php" style="text-decoration: none; color: #39c5bb;">Trang chủ</a> / <span>Đăng ký tài khoản</span>
             </div>
 
+            <?php if ($loi == "email_exists"): ?>
+                <div style="background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                    <i class="fa-solid fa-exclamation-circle"></i> Email đã được đăng ký. Vui lòng sử dụng email khác!
+                </div>
+            <?php elseif ($loi == "database_error"): ?>
+                <div style="background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                    <i class="fa-solid fa-exclamation-circle"></i> Lỗi hệ thống. Vui lòng thử lại sau!
+                </div>
+            <?php endif; ?>
+
             <form action="" method="POST">
                 
                 <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                    <input type="text" name="ten" placeholder="Tên" required value="<?php echo $ten; ?>"
+                    <input type="text" name="ten" placeholder="Tên" required value="<?php echo htmlspecialchars($ten); ?>"
                            style="flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; transition: 0.3s;"
                            onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                            onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
                     
-                    <input type="text" name="ho" placeholder="Họ" required value="<?php echo $ho; ?>"
+                    <input type="text" name="ho" placeholder="Họ" required value="<?php echo htmlspecialchars($ho); ?>"
                            style="flex: 1; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; transition: 0.3s;"
                            onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                            onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <input type="email" name="email" placeholder="Email" required value="<?php echo $email; ?>"
+                    <input type="email" name="email" placeholder="Email" required value="<?php echo htmlspecialchars($email); ?>"
                            style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; box-sizing: border-box; transition: 0.3s;"
                            onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                            onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'">
@@ -76,7 +115,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                            style="width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 30px; outline: none; box-sizing: border-box; transition: 0.3s;"
                            onfocus="this.style.borderColor='#39c5bb'; this.style.boxShadow='0 0 5px #39c5bb'"
                            onblur="this.style.borderColor='#ddd'; this.style.boxShadow='none'"
-                           oninput="this.setCustomValidity('')"> </div>
+                           oninput="this.setCustomValidity('')">
+                </div>
 
                 <div>
                     <button type="submit" 
@@ -103,11 +143,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <?php include 'footer.php'; ?>
 
-    <?php if ($loi_mat_khau): ?>
+    <?php if ($loi == "password_mismatch"): ?>
     <script>
         var inputXacNhan = document.getElementById("input_xacnhan");
         inputXacNhan.setCustomValidity("Mật khẩu xác nhận không khớp! Vui lòng nhập lại.");
-        inputXacNhan.reportValidity(); // Thông báo
+        inputXacNhan.reportValidity();
     </script>
     <?php endif; ?>
 

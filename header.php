@@ -1,4 +1,25 @@
-<?php include 'data.php'; //Lấy bỏ qua đây 
+<?php 
+// Khởi tạo session nếu chưa có
+if (!session_id()) {
+    session_start();
+}
+
+// Include data và config
+include_once 'data.php';
+require_once 'config.php';
+
+// Lấy số lượng giỏ hàng
+$cart_count = 0;
+if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true) {
+    $user_id = $_SESSION['user_id'];
+    $sql_cart = "SELECT SUM(so_luong) as total FROM gio_hang WHERE id_nguoi_dung = ?";
+    $stmt_cart = $conn->prepare($sql_cart);
+    $stmt_cart->bind_param("i", $user_id);
+    $stmt_cart->execute();
+    $result_cart = $stmt_cart->get_result();
+    $row_cart = $result_cart->fetch_assoc();
+    $cart_count = $row_cart['total'] ?? 0;
+}
 ?>
 
 <div style="background-color: #000000ff; height: 80px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-family: Arial, sans-serif;">
@@ -73,18 +94,29 @@
             onmouseover="this.style.backgroundColor='#39c5bb'; this.style.boxShadow='0 0 10px #39c5bb'"
             onmouseout="this.style.backgroundColor='transparent'; this.style.boxShadow='none'">
             <img src="img/buy0.jpg" alt="Cart" style="width: 60px; height: 30px; object-fit: contain; margin-right: 8px; mix-blend-mode: screen;">
-            <?php //mix-blend-mode: screen; => làm mờ nút
-            ?>
-            <span>Giỏ hàng (0)</span>
+            <span id="cart-count-display">Giỏ hàng (<?php echo $cart_count; ?>)</span>
         </a>
 
-        <a href="login.php" style="display: flex; align-items: center; text-decoration: none; color: white;
-                  border: 2px solid #39c5bb; border-radius: 30px; padding: 5px 15px; transition: 0.3s;"
-            onmouseover="this.style.backgroundColor='#39c5bb'; this.style.boxShadow='0 0 10px #39c5bb'"
-            onmouseout="this.style.backgroundColor='transparent'; this.style.boxShadow='none'">
-            <img src="img/user.jpg" alt="User" style="width: 30px; height: 30px; object-fit: contain; margin-right: 8px; mix-blend-mode: screen;">
-            <span>Đăng nhập</span>
-        </a>
+        <?php if (isset($_SESSION['user_logged_in']) && $_SESSION['user_logged_in'] === true): ?>
+            <!-- Người dùng đã đăng nhập -->
+            <a href="logout.php" style="display: flex; align-items: center; text-decoration: none; color: white;
+                      border: 2px solid #39c5bb; border-radius: 30px; padding: 5px 15px; transition: 0.3s;"
+                onmouseover="this.style.backgroundColor='#39c5bb'; this.style.boxShadow='0 0 10px #39c5bb'"
+                onmouseout="this.style.backgroundColor='transparent'; this.style.boxShadow='none'"
+                onclick="return confirm('Bạn có chắc muốn đăng xuất?')">
+                <img src="img/user.jpg" alt="User" style="width: 30px; height: 30px; object-fit: contain; margin-right: 8px; mix-blend-mode: screen;">
+                <span>Xin chào, <?php echo explode(' ', $_SESSION['user_name'])[0]; ?></span>
+            </a>
+        <?php else: ?>
+            <!-- Người dùng chưa đăng nhập -->
+            <a href="login.php" style="display: flex; align-items: center; text-decoration: none; color: white;
+                      border: 2px solid #39c5bb; border-radius: 30px; padding: 5px 15px; transition: 0.3s;"
+                onmouseover="this.style.backgroundColor='#39c5bb'; this.style.boxShadow='0 0 10px #39c5bb'"
+                onmouseout="this.style.backgroundColor='transparent'; this.style.boxShadow='none'">
+                <img src="img/user.jpg" alt="User" style="width: 30px; height: 30px; object-fit: contain; margin-right: 8px; mix-blend-mode: screen;">
+                <span>Đăng nhập</span>
+            </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -95,5 +127,13 @@
 
     function anMenu() {
         document.getElementById("bangmenu").style.display = "none";
+    }
+    
+    // Hàm cập nhật số lượng giỏ hàng (gọi từ AJAX)
+    function updateCartCount(count) {
+        var cartDisplay = document.getElementById("cart-count-display");
+        if (cartDisplay) {
+            cartDisplay.textContent = "Giỏ hàng (" + count + ")";
+        }
     }
 </script>

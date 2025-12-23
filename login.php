@@ -1,5 +1,8 @@
 <?php
 session_start();
+require_once 'config.php';
+
+$error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = trim($_POST['email']);
@@ -11,21 +14,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $_SESSION['admin_email'] = $email;
         $_SESSION['admin_username'] = "Admin";
         
-        // Chuyển đến trang quản lý admin
         echo "<script>
                 alert('Đăng nhập Admin thành công!');
                 window.location.href = 'admin.php';
               </script>";
         exit();
-    } else {
-        // Đây là tài khoản khách hàng thông thường
-        // Sau này code lưu vào Database sẽ viết ở đây.
+    }
+    
+    // Kiểm tra tài khoản khách hàng trong database
+    $sql = "SELECT id, ten, ho, email, mat_khau FROM nguoi_dung WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
         
-        echo "<script>
-                alert('Đăng nhập thành công! Mời bạn mua sắm.');
-                window.location.href = 'index.php';
-              </script>";
-        exit();
+        // Kiểm tra mật khẩu
+        if (password_verify($password, $user['mat_khau'])) {
+            // Đăng nhập thành công
+            $_SESSION['user_logged_in'] = true;
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_email'] = $user['email'];
+            $_SESSION['user_name'] = $user['ten'] . ' ' . $user['ho'];
+            
+            echo "<script>
+                    alert('Đăng nhập thành công! Chào mừng " . $user['ten'] . "');
+                    window.location.href = 'index.php';
+                  </script>";
+            exit();
+        } else {
+            $error = "Email hoặc mật khẩu không đúng!";
+        }
+    } else {
+        $error = "Email hoặc mật khẩu không đúng!";
     }
 }
 ?>
@@ -44,14 +67,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <?php include 'header.php'; ?>
 
     <div style="min-height: 600px; display: flex; align-items: center; justify-content: center; padding: 50px 20px;">
-        <?php //khung ?>
         <div style="width: 100%; max-width: 500px; padding: 40px; border: 2px solid #39c5bb; border-radius: 20px; background: white; box-shadow: 0 0 50px rgba(57, 197, 187, 0.2);">
-            <?php //box-shadow: => ngang-dọc-nhòe ?>
+            
             <h1 style="text-align: center; color: #333; margin-bottom: 10px;">ĐĂNG NHẬP</h1>
 
             <div style="text-align: center; margin-bottom: 30px; font-size: 14px; color: #888;">
                 <a href="index.php" style="text-decoration: none; color: #39c5bb;">Trang chủ</a> / <span>Đăng nhập tài khoản</span>
             </div>
+
+            <?php if (!empty($error)): ?>
+                <div style="background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; animation: shake 0.5s;">
+                    <i class="fa-solid fa-exclamation-triangle"></i> <?php echo $error; ?>
+                </div>
+            <?php endif; ?>
 
             <form action="" method="POST">
                 <div style="margin-bottom: 20px;">
@@ -92,12 +120,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </a>
                 </div>
             </form>
-
         </div>
     </div>
-
     <?php include 'footer.php'; ?>
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
 
 </body>
-
 </html>
