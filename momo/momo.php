@@ -18,11 +18,9 @@ $ma_don_hang = "DH" . date('Y') . rand(1000, 9999);
 
         <div class="header">
             <h2 style="margin: 0;">THÔNG TIN THANH TOÁN</h2>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Vui lòng quét mã để hoàn tất</p>
         </div>
         
         <div class="content">
-            <i class="fa-solid fa-envelope-circle-check success-icon"></i>
             <h1 style="color: #333; font-size: 24px; margin-bottom: 10px;">Đặt hàng thành công!</h1>
             <p style="color: #666; line-height: 1.6;">
                 Cảm ơn bạn đã mua sắm tại Null Eater Store.<br>
