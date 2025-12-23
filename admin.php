@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $trang_thai = $_POST['trang_thai'];
     $mo_ta = $_POST['mo_ta'];
 
-    // Câu lệnh thêm đơn giản
+    // Câu lệnh thêm SQL
     $sql = "INSERT INTO san_pham (ten, hinh, gia, gia_cu, giam_gia, nhan_vat, so_luong_ton, trang_thai, mo_ta) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     
@@ -177,6 +177,8 @@ $result_list = $conn->query("SELECT * FROM san_pham ORDER BY id DESC LIMIT 10");
             </div>
         </div>
     </div>
-    <?php include 'footer.php'; ?>
+    <?php include 'footer.php'; //if (!is_numeric($gia)) {
+       // echo "<script>alert('Lỗi: Giá bán phải là một con số (Ví dụ: 100000)!'); window.history.back();</script>";
+       // exit(); }?>
 </body>
 </html>
